@@ -23,12 +23,10 @@ export async function readError(response: Response, fallback: string) {
     const body = (await response.json()) as { error?: unknown };
     if (typeof body.error === "string") return body.error;
   } catch {
-    /* ignore */
   }
   return fallback;
 }
 
-/** Uploads the recording and streams the transcript back. */
 export async function transcribeRecording(
   file: File,
   onPartial: (text: string) => void,
@@ -57,18 +55,18 @@ export async function transcribeRecording(
   return final;
 }
 
-/** Streams the agent answer, reporting reasoning summary text and answer deltas separately. */
 export async function streamAgentAnswer(
   turns: Turn[],
   handlers: { onThinking: (text: string) => void; onAnswer: (text: string) => void },
   signal?: AbortSignal,
   context?: string,
   model?: string,
+  agent?: string,
 ): Promise<string> {
   const response = await fetch("/api/agent", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ turns, context, model }),
+    body: JSON.stringify({ turns, context, model, agent }),
     ...(signal ? { signal } : {}),
   });
   if (!response.ok) throw new Error(await readError(response, "The agent could not answer"));

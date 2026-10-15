@@ -10,9 +10,9 @@ export function cleanRaw(raw: string): string {
 }
 
 /** Runs one turn on the chosen provider. Local models are called straight from this browser. */
-export async function runProvider(provider: Provider, turns: Turn[], context: string, handlers: Handlers, signal: AbortSignal): Promise<string> {
+export async function runProvider(provider: Provider, turns: Turn[], context: string, handlers: Handlers, signal: AbortSignal, agentId?: string): Promise<string> {
   const where = KIND_INFO[provider.kind].where;
-  if (where === "built-in") return streamAgentAnswer(turns, handlers, signal, context || undefined, provider.model);
+  if (where === "built-in") return streamAgentAnswer(turns, handlers, signal, context || undefined, provider.model, agentId);
 
   if (where === "local") {
     const system = [SYSTEM_PROMPT, JSON_INSTRUCTION, planContextMessage(context)].filter(Boolean).join("\n\n");

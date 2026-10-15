@@ -1,4 +1,4 @@
-import { CHAT_MODEL, GATEWAY_BASE_URL, getGatewayHeaders } from "./gateway.server";
+import { CHAT_MODEL, GATEWAY_BASE_URL, getGatewayHeaders, resolveActualModel } from "./gateway.server";
 import {
   createLovableAiGatewayRunIdFetch,
   getLovableAiGatewayResponseHeaders,
@@ -51,6 +51,7 @@ export async function streamResponses(
 
 /** Streams from OpenClaw Gateway (/v1/chat/completions) and re-emits deltas as Responses-style SSE events. */
 async function streamChatAsResponses(request: Request, input: Record<string, unknown>[], model: string) {
+  model = resolveActualModel(model);
   const gateway = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(request));
   const messages = input.map((m) => ({
     role: m["role"],

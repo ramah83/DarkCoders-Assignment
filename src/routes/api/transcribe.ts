@@ -24,20 +24,34 @@ export const Route = createFileRoute("/api/transcribe")({
           file = null;
         }
         if (!file || !file.size) {
-          return new Response(JSON.stringify({ error: "No audio received" }), {
+          return new Response(JSON.stringify({ error: "No audio was captured. Please try recording again." }), {
             status: 400,
             headers: { "Content-Type": "application/json" },
           });
         }
 
         try {
-          const upstream = await transcribe(file, request.signal);
-          const headers = new Headers({ "Cache-Control": "no-cache" });
-          headers.set("Content-Type", upstream.headers.get("Content-Type") ?? "text/event-stream");
-          return new Response(upstream.body, { status: upstream.status, headers });
+          const text = await transcribe(file, request.signal);
+
+          // Emit as SSE so the client's readSse / transcribeRecording can parse it.
+          // The client listens for:
+          //   { type: "transcript.text.delta", delta: "..." }
+          //   { type: "transcript.text.done",  text: "..." }
+          const ssePayload =
+            `data: ${JSON.stringify({ type: "transcript.text.delta", delta: text })}\n\n` +
+            `data: ${JSON.stringify({ type: "transcript.text.done", text })}\n\n`;
+
+          return new Response(ssePayload, {
+            status: 200,
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+            },
+          });
         } catch (error) {
           if (request.signal.aborted) return new Response(null, { status: 499 });
           const message = error instanceof Error ? error.message : "Transcription failed";
+          console.warn("[api/transcribe] Error:", message);
           return new Response(JSON.stringify({ error: message }), {
             status: 400,
             headers: { "Content-Type": "application/json" },

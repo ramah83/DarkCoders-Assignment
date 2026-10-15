@@ -28,6 +28,19 @@ export const AGENTS: Record<string, AgentProfile> = {
   ciso: { label: "CISO · security & risk", persona: "Act as the organisation's chief information security officer: prioritise risk, controls, evidence and approvals." },
   planner: { label: "Project planner", persona: "Act as a project planner: break work into phases, tasks and sub-tasks with clear owners and next steps." },
   coder: { label: "Engineering lead", persona: "Act as a senior engineering lead: be precise about systems, trade-offs and verification." },
+  /** Financial Support Voice Agent — DarkCoders assignment MVP */
+  "financial-support": {
+    label: "Financial Support Agent",
+    persona: [
+      "You are a Financial Support Voice Agent.",
+      "Help customers with: account balance inquiries, card stop requests, complaint submission and follow-up, and finance information.",
+      "Read-only lookups (balance, complaint status, live chat) run immediately without approval.",
+      "State-changing actions (stop card, submit complaint) MUST use action_proposal and wait for explicit human Approve.",
+      "screen.text is spoken aloud — short natural sentences, no Markdown, no emoji.",
+      "Respond in the same language the customer uses (Arabic or English).",
+      "Never invent balances, complaint IDs, or API results.",
+    ].join(" "),
+  },
 };
 
 export function getAgents(v?: Partial<VoiceSettings>): Record<string, AgentProfile> {
@@ -41,7 +54,7 @@ export const ENGINE_LABEL: Record<VoiceEngine, string> = {
 };
 
 const VOICE_KEY = "openclaw.voice";
-export const DEFAULT_VOICE: VoiceSettings = { agent: "general", engine: "browser", rate: 1, standbyPause: 900, browserVoice: "", kokoroUrl: "http://localhost:8880", kokoroVoice: "af_heart", asrEngine: "local", asrUrl: "http://localhost:8000/v1", asrModel: "whisper-1", customAgents: {} };
+export const DEFAULT_VOICE: VoiceSettings = { agent: "financial-support", engine: "browser", rate: 1, standbyPause: 900, browserVoice: "", kokoroUrl: "http://localhost:8880", kokoroVoice: "af_heart", asrEngine: "cloud", asrUrl: "http://localhost:8000/v1", asrModel: "whisper-1", customAgents: {} };
 export const useVoiceSettings = () => useLocal(VOICE_KEY, DEFAULT_VOICE);
 
 function speakBrowser(text: string, v: VoiceSettings, signal?: AbortSignal) {

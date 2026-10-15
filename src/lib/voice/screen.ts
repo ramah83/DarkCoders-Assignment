@@ -35,22 +35,56 @@ function parseActionProposal(raw: unknown): ActionProposal | null | undefined {
 /** Validates planner output against the blueprint rules; returns null if invalid. */
 export function parseScreen(raw: string): Screen | null {
   try {
-    const data = JSON.parse(raw) as { kind?: unknown; screen?: { text?: unknown; choices?: unknown; navigation?: unknown }; action_proposal?: unknown };
+    const data = JSON.parse(raw) as {
+      kind?: unknown;
+      screen?: { text?: unknown; choices?: unknown; navigation?: unknown };
+      text?: unknown;
+      choices?: unknown;
+      navigation?: unknown;
+      action_proposal?: unknown;
+      app_commands?: unknown[];
+    };
+
+    
+    const screenObj = data.screen ?? (typeof data.text === "string" ? (data as unknown as typeof data.screen) : undefined);
+    if (!screenObj) return null;
+
     const proposal = parseActionProposal(data.action_proposal);
-    if ((data.kind !== "screen" && data.kind !== "action_proposal") || proposal === undefined || !data.screen) return null;
-    const text = typeof data.screen.text === "string" ? data.screen.text.trim() : "";
+
+    
+    const hasValidKind = data.kind === "screen" || data.kind === "action_proposal";
+    const hasScreenWithText = typeof screenObj.text === "string" && screenObj.text.trim().length > 0;
+    if (!hasValidKind && !hasScreenWithText) return null;
+    if (proposal === undefined) return null;
+
+    const text = typeof screenObj.text === "string" ? screenObj.text.trim() : "";
     if (!text) return null;
+
     const seen = new Set<string>();
-    const choices = (Array.isArray(data.screen.choices) ? data.screen.choices : [])
-      .filter((c): c is Choice =>
-        Boolean(c) && typeof c.id === "string" && /^[a-z][a-z0-9_]{0,31}$/.test(c.id) &&
-        typeof c.label === "string" && c.label.length > 0 && c.label.length <= 40 &&
-        typeof c.value === "string" && c.value.length > 0 && c.value.length <= 1000,
-      )
+    let choiceIdx = 0;
+    const choices = (Array.isArray(screenObj.choices) ? screenObj.choices : [])
+      .filter((c): c is Choice => {
+        if (!c || typeof c !== "object") return false;
+        
+        if (typeof c.id !== "string" || !c.id.trim()) c.id = `choice_${choiceIdx++}`;
+        return (
+          typeof c.id === "string" && /^[a-z][a-z0-9_]{0,31}$/.test(c.id) &&
+          typeof c.label === "string" && c.label.length > 0 && c.label.length <= 40 &&
+          typeof c.value === "string" && c.value.length > 0 && c.value.length <= 1000
+        );
+      })
       .filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
-    const navigation = [...new Set((Array.isArray(data.screen.navigation) ? data.screen.navigation : []) as Nav[])]
-      .filter((n) => NAV_VALUES.includes(n));
-    // Blueprint: choices + navigation must total four or fewer.
+
+    
+    const rawNav = Array.isArray(screenObj.navigation) ? screenObj.navigation : [];
+    const normalizedNav = rawNav.map((n: unknown) => {
+      if (typeof n === "string") return n;
+      if (typeof n === "object" && n && "value" in n && typeof (n as Record<string, unknown>)["value"] === "string") return (n as Record<string, unknown>)["value"] as string;
+      return "";
+    });
+    const navigation = [...new Set(normalizedNav as Nav[])].filter((n) => NAV_VALUES.includes(n));
+
+    
     const trimmedChoices = choices.slice(0, Math.max(0, 4 - navigation.length));
     const commands = (Array.isArray((data as { app_commands?: unknown }).app_commands) ? (data as { app_commands: unknown[] }).app_commands : [])
       .filter((c): c is Command => Boolean(c) && typeof c === "object" && COMMAND_NAMES.includes((c as Command).name) && typeof (c as Command).value === "string")
@@ -61,7 +95,7 @@ export function parseScreen(raw: string): Screen | null {
   }
 }
 
-/** Best-effort extraction of screen.text from a partially streamed JSON object. */
+
 export function partialText(raw: string): string {
   const body = raw.match(/"text"\s*:\s*"((?:[^"\\]|\\.)*)/)?.[1];
   if (!body) return "";

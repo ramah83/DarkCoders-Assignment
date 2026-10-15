@@ -23,3 +23,15 @@ export function getGatewayHeaders(extra?: Record<string, string>): Record<string
     ...extra,
   };
 }
+
+/**
+ * Maps internal virtual model names (openclaw/*) to the real LLM model
+ * configured in OPENCLAW_DEFAULT_MODEL.
+ *
+ * This lets the console use `openclaw/default`, `openclaw/dc-orchestrator`, etc.
+ * as routing aliases while sending the real model name to Groq / OpenAI / Ollama.
+ */
+export function resolveActualModel(model: string): string {
+  if (model.startsWith("openclaw/")) return CHAT_MODEL;
+  return model;
+}

@@ -174,7 +174,7 @@ function VoiceConsole() {
               if (!writing) { writing = true; addStep("Writing reply"); }
               if (opts.typing) setRun((current) => (current ? { ...current, answer: partialText(cleanRaw(text)), stage: "streaming" } : current));
             },
-          }, signal);
+          }, signal, voiceSettings.agent);
           break;
         } catch (error) {
           if (signal.aborted) throw error;
